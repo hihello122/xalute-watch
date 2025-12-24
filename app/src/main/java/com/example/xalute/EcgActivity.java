@@ -19,6 +19,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Toast;
+import android.view.Window;
+import android.view.WindowManager;
+import android.view.Gravity;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.Color;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -142,7 +147,10 @@ public class EcgActivity extends FragmentActivity {
 
                 Log.d(TAG, "[Send] 저장할 JSON: " + fhirData);
 
+                binding.btnSend.setEnabled(false);
                 showProgressDialog();
+
+
 
                 new Handler(Looper.getMainLooper()).post(() -> {
                     FHIRSender sender = new FHIRSender(getApplicationContext(), new FHIRSender.FHIRSenderListener() {
@@ -655,17 +663,39 @@ public class EcgActivity extends FragmentActivity {
     private AlertDialog progressDialog;
 
     private void showProgressDialog() {
-        LayoutInflater inflater = LayoutInflater.from(EcgActivity.this);
-        View progressView = inflater.inflate(R.layout.activity_data_sending, null);
-
-        progressDialog = new AlertDialog.Builder(EcgActivity.this)
+        View progressView = LayoutInflater.from(this).inflate(R.layout.activity_data_sending, null);
+        progressDialog = new AlertDialog.Builder(this)
                 .setView(progressView)
                 .setCancelable(false)
                 .create();
 
         progressDialog.show();
-    }
 
+        Window window = progressDialog.getWindow();
+        if (window != null) {
+            // 1. 다이얼로그 자체 배경은 투명하게 (커스텀 레이아웃만 보이게)
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+            // 2. 바탕을 어둡게 만드는 설정 추가
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            WindowManager.LayoutParams params = window.getAttributes();
+
+            // 어두운 정도 (0.0: 투명 ~ 1.0: 완전 검정). 0.5f ~ 0.7f 정도가 적당합니다.
+            params.dimAmount = 0.6f;
+
+            // 3. 스크롤 방지를 위해 창 크기를 화면에 꽉 채움
+            params.width = WindowManager.LayoutParams.MATCH_PARENT;
+            params.height = WindowManager.LayoutParams.MATCH_PARENT;
+
+            // 4. 내용물을 하단 중앙으로 배치
+            params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+
+            // 5. 바닥에서의 여백
+            params.y = (int) (120 * getResources().getDisplayMetrics().density);
+
+            window.setAttributes(params);
+        }
+    }
     private void dismissProgressDialog() {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
